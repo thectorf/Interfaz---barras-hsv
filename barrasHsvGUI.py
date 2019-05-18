@@ -184,6 +184,12 @@ class Iniciar:
                 lower = np.array([self.hmin.get(), self.smin.get(), self.vmin.get()])
                 upper = np.array([self.hmax.get(), self.smax.get(), self.vmax.get()])
                 mask = cv2.inRange(hsv, lower, upper)
+                # inicio filtros
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
+                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                mask = cv2.dilate(mask, kernel, iterations = 4)
+                # fin filtros
                 self.photo = ImageTk.PhotoImage(image = Image.fromarray(mask))
                 self.canvas.create_image(0, 0, image = self.photo, anchor = NW)
 
