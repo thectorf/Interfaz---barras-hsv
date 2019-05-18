@@ -5,9 +5,13 @@ from time import sleep
 from tkinter import filedialog as FileDialog
 import numpy as np
 import math
+import serial
+from time import sleep
 
 start = False
-ctrl = 0
+ctrlActualizar = False
+ctrlSerial = True
+enviarSerial = None
 
 class HiloCamara():
     def __init__(self, video_source):
@@ -19,8 +23,6 @@ class HiloCamara():
             raise ValueError("Error inesperado!")
         #self.width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         #self.height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        #print(self.width)
-        #print(self.height)
     def obtenerFotograma(self):
         if self.cap.isOpened():
             ret, frame = self.cap.read()
@@ -32,10 +34,34 @@ class HiloCamara():
         if self.cap.isOpened():
             self.cap.release()
 
+class Serial(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, daemon = True, target = self.enviarDatos)
+        threading.Thread.name="Hilo Serial"
+    def __del__(self):
+        pass
+
+    def enviarDatos(self):
+        global ctrlSerial, enviarSerial
+        puerto   = serial.Serial(port = 'COM3',
+                                 baudrate = 9600,
+                                 bytesize = serial.EIGHTBITS,
+                                 parity   = serial.PARITY_NONE,
+                                 stopbits = serial.STOPBITS_ONE,
+                                 write_timeout = None)
+        sleep(3)
+        while ctrlSerial:
+            if enviarSerial is None:
+                print(str(0).encode())
+            else:
+                puerto.write(str(int(enviarSerial)).encode())
+                puerto.write("\n".encode())
+                print(int(enviarSerial))
+        puerto.close()
+
 class Iniciar:
 
     def __init__(self):
-        #global start
         self.camara = 0
         self.root = Tk()
         self.root.title("Panel de calibración")
@@ -144,29 +170,33 @@ class Iniciar:
             fichero.close()
 
     def encender(self):
-        global start, ctrl
+        global start, ctrlActualizar, ctrlSerial
+        ctrlSerial = True
         self.start = start
         if self.start is False:
             self.cap = HiloCamara(1)
             self.start = True
             start = True
             self.iniciar = False
-            if ctrl == 0:
+            if ctrlActualizar == False:
                 self.actualizar()
 
     def iniciar(self):
         self.iniciar = True
+        self.serial = Serial()
+        self.serial.start()
 
     def apagar(self):
-        global start, ctrl
+        global start, ctrlActualizar, ctrlSerial
         self.start = start
         if self.start:
             self.start = False
             self.cap.cap.release()
             start = False
-            ctrl = 1
+            ctrlActualizar = True
             self.iniciar = False
             self.reiniciarValores()
+            ctrlSerial = False
 
     def reiniciarValores(self):
         self.varx.set("X: 0")
@@ -176,6 +206,7 @@ class Iniciar:
         self.vars.set("S: 0")
 
     def actualizar(self):
+        global enviarSerial
         if self.start:
             ret, frame = self.cap.obtenerFotograma()
             if ret:
@@ -187,9 +218,9 @@ class Iniciar:
                 # inicio filtros
                 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
                 mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-                mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+                mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
                 mask = cv2.dilate(mask, kernel, iterations = 4)
-                # fin filtros
+                #fin filtros
                 self.photo = ImageTk.PhotoImage(image = Image.fromarray(mask))
                 self.canvas.create_image(0, 0, image = self.photo, anchor = NW)
 
@@ -213,8 +244,10 @@ class Iniciar:
                                 t = math.atan(x2/y2)
                                 t = math.degrees(t)
                                 self.vars.set("S: {0:.2f}".format(t))
+                                enviarSerial = t
                             else:
                                 self.vars.set("S: {}".format(t))
+                                enviarSerial = t
         else:
             self.imageDefault = ImageTk.PhotoImage(file='img/default.jpg')
             self.canvas.create_image(0, 0, anchor = NW,  image=self.imageDefault)
