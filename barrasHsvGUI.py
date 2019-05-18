@@ -7,7 +7,10 @@ import numpy as np
 import math
 import serial
 from time import sleep
+from tkinter import ttk
+import serial.tools.list_ports
 
+puertoCom = None
 start = False
 ctrlActualizar = False
 ctrlSerial = True
@@ -39,25 +42,24 @@ class Serial(threading.Thread):
         threading.Thread.__init__(self, daemon = True, target = self.enviarDatos)
         threading.Thread.name="Hilo Serial"
     def __del__(self):
-        pass
+        self.puerto.close()
 
     def enviarDatos(self):
-        global ctrlSerial, enviarSerial
-        puerto   = serial.Serial(port = 'COM3',
+        global ctrlSerial, enviarSerial, puertoCom
+        self.puerto   = serial.Serial(port = puertoCom,
                                  baudrate = 9600,
                                  bytesize = serial.EIGHTBITS,
                                  parity   = serial.PARITY_NONE,
                                  stopbits = serial.STOPBITS_ONE,
                                  write_timeout = None)
-        sleep(3)
+        #sleep(.3)
         while ctrlSerial:
             if enviarSerial is None:
                 print(str(0).encode())
             else:
-                puerto.write(str(int(enviarSerial)).encode())
-                puerto.write("\n".encode())
+                self.puerto.write(str(int(enviarSerial)).encode())
+                self.puerto.write("\n".encode())
                 print(int(enviarSerial))
-        puerto.close()
 
 class Iniciar:
 
@@ -71,13 +73,24 @@ class Iniciar:
         frameLeft = Frame()
         frameLeft.pack(side = "left")
         frameLeft.config(width="260", height="480", padx=10)
+
+        #LABEL DE PUERTOS COM
+        group0 = LabelFrame(frameLeft, text="Busqueda puertos COM")
+        group0.pack(ipady = 4)
+        self.comboBox = ttk.Combobox(group0,state="readonly")
+        self.comboBox["values"]
+        self.comboBox.bind("<<ComboboxSelected>>", self.changeCom)
+        self.comboBox.grid(row = 0, column = 0, padx=5)
+        btnCom = Button(group0, text="Buscar", command=self.buscarCom)
+        btnCom.grid(row = 0, column = 1, padx=5)
+
         #LABEL FRAME PANEL DE ENCENDIDO
         group1 = LabelFrame(frameLeft, text="Panel de Encendido/Apagado")
         group1.pack(ipady = 2, pady=10)
         btnEncender = Button(group1, text="Encender", command=self.encender)
         btnEncender.grid(row = 0, column = 0, padx=5)
         btnStart = Button(group1, text="Start", command=self.iniciar)
-        btnStart.grid(row = 0, column = 1)
+        btnStart.grid(row = 0, column = 1, pady=4)
         btnApagar = Button(group1, text="Apagar", command=self.apagar)
         btnApagar.grid(row = 0, column = 2, padx=5)
         #LABEL FRAME PANEL CONTROL HSV
@@ -144,6 +157,17 @@ class Iniciar:
 
 
         self.root.mainloop()
+
+    def buscarCom(self):
+        ports = list(serial.tools.list_ports.comports())
+        for p in ports:
+            self.comboBox["values"] = list(self.comboBox["values"]) + [p]
+        self.comboBox.set(p)
+        self.changeCom("<<ComboboxSelected>>")
+
+    def changeCom(self, event):
+        global puertoCom
+        puertoCom = self.comboBox.get().split(' ')[0]
 
     def guardar(self):
         fichero = FileDialog.asksaveasfile(title = "Guardar valores", mode = 'w', defaultextension = ".txt", filetype = (("Archivo de texto", "*.txt"),))
