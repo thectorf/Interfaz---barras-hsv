@@ -47,7 +47,7 @@ class Serial(threading.Thread):
     def enviarDatos(self):
         global ctrlSerial, enviarSerial, puertoCom
         self.puerto   = serial.Serial(port = puertoCom,
-                                 baudrate = 9600,
+                                 baudrate = 115200,
                                  bytesize = serial.EIGHTBITS,
                                  parity   = serial.PARITY_NONE,
                                  stopbits = serial.STOPBITS_ONE,
@@ -74,8 +74,8 @@ class Iniciar:
         frameLeft.pack(side = "left")
         frameLeft.config(width="260", height="480", padx=10)
 
-        #LABEL DE PUERTOS COM
-        group0 = LabelFrame(frameLeft, text="Busqueda puertos COM")
+        #LABEL DE CONEXIONES
+        group0 = LabelFrame(frameLeft, text="COMEXIONES")
         group0.pack(ipady = 4)
         self.comboBox = ttk.Combobox(group0,state="readonly")
         self.comboBox["values"]
@@ -83,6 +83,8 @@ class Iniciar:
         self.comboBox.grid(row = 0, column = 0, padx=5)
         btnCom = Button(group0, text="Buscar", command=self.buscarCom)
         btnCom.grid(row = 0, column = 1, padx=5)
+        self.comboBox2 = ttk.Combobox(group0,state="readonly",values=["CAM: 0","CAM: 1"])
+        self.comboBox2.grid(row = 1, column = 0)
 
         #LABEL FRAME PANEL DE ENCENDIDO
         group1 = LabelFrame(frameLeft, text="Panel de Encendido/Apagado")
@@ -150,7 +152,7 @@ class Iniciar:
         frameRight = Frame()
         frameRight.pack(side = "right")
         frameRight.config(bg="black", width="640", height="480")
-        self.canvas = Canvas(frameRight, width = 640, height = 480, bg = "green")
+        self.canvas = Canvas(frameRight, width = 640, height = 480, bg = "black")
         self.canvas.pack()
         self.imageDefault = ImageTk.PhotoImage(file='img/default.jpg')
         self.canvas.create_image(0, 0, anchor = NW,  image=self.imageDefault)
@@ -164,6 +166,7 @@ class Iniciar:
             self.comboBox["values"] = list(self.comboBox["values"]) + [p]
         self.comboBox.set(p)
         self.changeCom("<<ComboboxSelected>>")
+        self.comboBox2.current(0)
 
     def changeCom(self, event):
         global puertoCom
@@ -198,7 +201,7 @@ class Iniciar:
         ctrlSerial = True
         self.start = start
         if self.start is False:
-            self.cap = HiloCamara(1)
+            self.cap = HiloCamara(int(self.comboBox2.get().split(' ')[1]))
             self.start = True
             start = True
             self.iniciar = False
