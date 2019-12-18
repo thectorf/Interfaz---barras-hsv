@@ -1,3 +1,6 @@
+###############
+#Creado por Hector Flores
+###############
 from tkinter import *
 import cv2, threading
 from PIL import ImageTk, Image
@@ -75,7 +78,7 @@ class Iniciar:
         frameLeft.config(width="260", height="480", padx=10)
 
         #LABEL DE CONEXIONES
-        group0 = LabelFrame(frameLeft, text="COMEXIONES")
+        group0 = LabelFrame(frameLeft, text="CONEXIONES")
         group0.pack(ipady = 4)
         self.comboBox = ttk.Combobox(group0,state="readonly")
         self.comboBox["values"]
